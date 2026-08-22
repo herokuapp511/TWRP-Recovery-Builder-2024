@@ -132,21 +132,25 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd workspace
-        git clone ${{ github.event.inputs.DEVICE_TREE }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
-        cd ${{ github.event.inputs.DEVICE_PATH }}
+        git clone --branch "${{ github.event.inputs.DEVICE_TREE_BRANCH }}" "${{ github.event.inputs.DEVICE_TREE }}" "${{ github.event.inputs.DEVICE_PATH }}"
+        cd "${{ github.event.inputs.DEVICE_PATH }}"
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Check Build Makefile
       run: |
         cd workspace
-        if [ -f ${{ github.event.inputs.DEVICE_PATH }}/twrp_${{ github.event.inputs.DEVICE_NAME}}.mk ]; then
+        device_path="${{ github.event.inputs.DEVICE_PATH }}"
+        device_name="${{ github.event.inputs.DEVICE_NAME }}"
+        echo "Checking makefiles in: $PWD/$device_path"
+        find "$device_path" -maxdepth 1 -type f -name '*.mk' -print
+        if [ -f "$device_path/twrp_${device_name}.mk" ]; then
             echo "DEVICE_MAKEFILE=twrp_${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
-        elif [ -f ${{ github.event.inputs.DEVICE_PATH }}/omni_${{ github.event.inputs.DEVICE_NAME}}.mk ]; then
+        elif [ -f "$device_path/omni_${device_name}.mk" ]; then
             echo "DEVICE_MAKEFILE=omni_${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
         else
-            echo "No recovery makefile file found!"
+            echo "No recovery makefile found in $PWD/$device_path"
+            exit 1
         fi
-      continue-on-error: true
       
     - name: Install Python 2
       if: github.event.inputs.MANIFEST_BRANCH != 'twrp-11' && github.event.inputs.MANIFEST_BRANCH != 'twrp-12.1'  && github.event.inputs.MANIFEST_BRANCH != 'twrp-14'
